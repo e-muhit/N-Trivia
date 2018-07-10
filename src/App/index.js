@@ -1,9 +1,13 @@
-import React, { Component } from "react";
-import "./style.css";
+import React, { Component } from 'react';
+import Room from "../Room";
 
 class App extends Component {
   render() {
-    return <div className="App">Hello World</div>;
+    return (
+      <div>
+        <Room />
+      </div>
+    );
   }
 }
 
