@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
-import { subscribeToTimer } from './app';
+import { timer } from './app';
 
 class Room extends Component {
     constructor(props) {
         super(props)
-        subscribeToTimer((err, timestamp) => this.setState({
+        timer((err, timestamp) => this.setState({
             timestamp
         }));
         this.state = {
@@ -21,7 +21,7 @@ class Room extends Component {
         this.updateInput = this.updateInput.bind(this)
         this.onFormSubmit = this.onFormSubmit.bind(this)
         this.multipleChoice = this.multipleChoice.bind(this)
-    }
+    } 
 
     componentDidMount() {
         fetch('/room.json')
@@ -33,8 +33,12 @@ class Room extends Component {
                         let dom = parser.parseFromString(`<!doctype html><body><div>${x.question}</div>`, 'text/html');
                         return (dom.body.textContent);
                     }),
-                    correct_answers: json.results.map(y => y.correct_answer),
-                    wrong_answers: json.results.map(y => y.incorrect_answers)
+                    correct_answers: json.results.map(y => {
+                        let parser = new DOMParser();
+                        let dom = parser.parseFromString(`<!doctype html><body><div>${y.correct_answer}</div>`, 'text/html');
+                        return (dom.body.textContent);
+                    }),
+                    wrong_answers: json.results.map(z => z.incorrect_answers)
                 })
                 for (let i = 0; i < this.state.wrong_answers.length; i++) {
                     this.setState({
@@ -68,8 +72,8 @@ class Room extends Component {
     }
     multipleChoice() {
         let current = this.state.answers[this.state.currentQuestionIndex]
-        current.map(x => {
-            return (<button>{x}</button>)
+        return current.map(element => {
+            return <button>{element}</button>
         })
     }
     render() {
@@ -78,11 +82,11 @@ class Room extends Component {
                 <div>
                     <h1>{this.state.questions[this.state.currentQuestionIndex]}</h1>
                     <form>
-                        {this.multipleChoice()}
+                       {this.multipleChoice()}
                     </form>
                     <button onClick={this.nextQuestion}>Next Question</button>
                     <p className="App-intro">
-                        This is the timer value: {this.state.timestamp}
+                        TIME: {this.state.timestamp}
                     </p>
                 </div>
             )

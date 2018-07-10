@@ -13,17 +13,17 @@ io.attach(server, {
 })
 const fetch = require('node-fetch');
 
-
+// (`https://opentdb.com/api.php?amount=5&category=${category}&difficulty=hard&type=multiple`)
 app.get('/room.json', (request, response) => {
     const categories = [...Array(24).keys()].map(x => x + 9);
     const category = categories[Math.floor(Math.random() * categories.length)]
-    return fetch(`https://opentdb.com/api.php?amount=5&category=${category}&difficulty=easy&type=multiple`)
+    return fetch(`https://opentdb.com/api.php?amount=5&difficulty=hard&type=multiple`)
         .then(response => response.json())
         .then(json => response.send(json))
 })
 
 io.on('connection', client => {
-    client.on('subscribeToTimer', (interval) => {
+    client.on('timer', (interval) => {
         console.log('client is subscribing to timer with interval ', interval);
         setInterval(() => {
             client.emit('timer', new Date());
