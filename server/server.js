@@ -4,7 +4,13 @@ const PORT = process.env.PORT || 4567;
 const server = app.listen(PORT, () => {
     console.log(`Express web server listening on port ${PORT}`);
 });
-// const io = require('socket.io').listen(server);
+const io = require('socket.io')(server);
+
+io.attach(server, {
+    pingInterval: 10000,
+    pingTimeout: 5000,
+    cookie: false
+})
 const fetch = require('node-fetch');
 
 
@@ -14,6 +20,15 @@ app.get('/room.json', (request, response) => {
     return fetch(`https://opentdb.com/api.php?amount=5&category=${category}&difficulty=easy&type=multiple`)
         .then(response => response.json())
         .then(json => response.send(json))
+})
+
+io.on('connection', client => {
+    client.on('subscribeToTimer', (interval) => {
+        console.log('client is subscribing to timer with interval ', interval);
+        setInterval(() => {
+            client.emit('timer', new Date());
+        }, interval);
+    });
 })
 
 // function randomString() {
