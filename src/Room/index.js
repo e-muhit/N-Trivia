@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
-import { timer } from './app';
+// import { timer } from './app';
 
 class Room extends Component {
     constructor(props) {
         super(props)
-        timer((err, timestamp) => this.setState({
-            timestamp
-        }));
+        // timer((err, timestamp) => this.setState({
+        //     timestamp
+        // }));
         this.state = {
             questions: '',
             correct_answers: '',
@@ -15,11 +15,11 @@ class Room extends Component {
             currentQuestionIndex: 0,
             inputValue: '',
             answers: [],
-            timestamp: 'no timestamp yet'
+            // timestamp: 'no timestamp yet'
         }
         this.nextQuestion = this.nextQuestion.bind(this)
         this.updateInput = this.updateInput.bind(this)
-        this.onFormSubmit = this.onFormSubmit.bind(this)
+        this.newUser = this.newUser.bind(this)
         this.multipleChoice = this.multipleChoice.bind(this)
     } 
 
@@ -48,12 +48,26 @@ class Room extends Component {
             })
     }
 
-    onFormSubmit(e) {
-        e.preventDefault()
-        this.setState({
-            users: this.state.users.concat([this.state.inputValue]),
-            inputValue: ''
+    newUser(evt) {
+        evt.preventDefault();
+        const newUser = {
+            user: this.state.inputValue
+        }
+        fetch('/user/:room', {
+            method: "POST",
+            body: JSON.stringify(newUser),
+            headers: {
+                "Accept": "application/json",
+                "Content-type": "application/json"
+            }
         })
+            .then(response => response.json())
+            .then(resjson => {
+                this.setState({
+                    users: resjson,
+                    inputValue: ''
+                });
+            });
     }
 
     updateInput(evt) {
@@ -85,15 +99,12 @@ class Room extends Component {
                        {this.multipleChoice()}
                     </form>
                     <button onClick={this.nextQuestion}>Next Question</button>
-                    <p className="App-intro">
-                        TIME: {this.state.timestamp}
-                    </p>
                 </div>
             )
         }
         return (
             <form onSubmit={this.onFormSubmit}>
-                <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} className="users" name='users' placeholder="Enter Username" />
+                <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue}  name='user' placeholder="Enter Username" />
                 <input type="submit" />
             </form>
         );
