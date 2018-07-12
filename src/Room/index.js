@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import io from 'socket.io-client';
 // import { timer } from './app';
 
 class Room extends Component {
@@ -8,6 +9,7 @@ class Room extends Component {
         //     timestamp
         // }));
         this.state = {
+            message: '',
             questions: '',
             correct_answers: '',
             wrong_answers: '',
@@ -15,45 +17,72 @@ class Room extends Component {
             currentQuestionIndex: 0,
             inputValue: '',
             answers: [],
-            // timestamp: 'no timestamp yet'
+            isHidden: true,
+            // startGame: false,
+            username: null,
         }
         this.nextQuestion = this.nextQuestion.bind(this)
         this.updateInput = this.updateInput.bind(this)
         this.newUser = this.newUser.bind(this)
         this.multipleChoice = this.multipleChoice.bind(this)
-    } 
+        this.startGame = this.startGame.bind(this)
+        this.renderUsers = this.renderUsers.bind(this)
+    }
 
     componentDidMount() {
-        fetch('/room.json')
-            .then(response => response.json())
-            .then(json => {
+        const room = this.props.match.params.room
+        const socket = io(`/${room}`);
+        this.setState({
+            users: []
+        })
+        socket.on('users', (msg) => {
+            if (msg != 'Game started') {
                 this.setState({
-                    questions: json.results.map(x => {
-                        let parser = new DOMParser();
-                        let dom = parser.parseFromString(`<!doctype html><body><div>${x.question}</div>`, 'text/html');
-                        return (dom.body.textContent);
-                    }),
-                    correct_answers: json.results.map(y => {
-                        let parser = new DOMParser();
-                        let dom = parser.parseFromString(`<!doctype html><body><div>${y.correct_answer}</div>`, 'text/html');
-                        return (dom.body.textContent);
-                    }),
-                    wrong_answers: json.results.map(z => z.incorrect_answers)
+                    message: msg.msg,
+                    users: msg.users
                 })
-                for (let i = 0; i < this.state.wrong_answers.length; i++) {
-                    this.setState({
-                        answers: this.state.answers.concat([this.state.wrong_answers[i].concat(this.state.correct_answers[i])])
-                    })
+            }
+        });
+        fetch(`/user/${room}`)
+            .then(response => response.json())
+            .then(resjson => {
+                this.setState({
+                    users: resjson.users
+                })
+                if (this.state.users !== undefined) {
+                    if (this.state.users.length >= 3) {
+                        this.setState({
+                            isHidden: false
+                        })
+                    }
                 }
             })
     }
 
+    startGame(){
+        
+    }
+    renderUsers() {
+        if (this.state.users !== undefined) {
+            return (
+                <div>
+                    <ul>
+                        {this.state.users.map((x, i) => {
+                            return <li key={i}>{x}</li>
+                        })}
+                    </ul>
+                    {this.state.users.length <= 1 && this.state.username ? null : <button onClick={this.startGame}>Start Game</button>}
+                </div>
+            )
+        }
+    }
     newUser(evt) {
         evt.preventDefault();
         const newUser = {
             user: this.state.inputValue
         }
-        fetch('/user/:room', {
+        const room = this.props.match.params.room
+        fetch(`/user/${room}`, {
             method: "POST",
             body: JSON.stringify(newUser),
             headers: {
@@ -64,10 +93,20 @@ class Room extends Component {
             .then(response => response.json())
             .then(resjson => {
                 this.setState({
-                    users: resjson,
+                    users: resjson.users,
+                    username: newUser.user,
                     inputValue: ''
-                });
+                })
+                if (this.state.users.length >= 3) {
+                    this.setState({
+                        isHidden: false
+                    })
+                }
             });
+    }
+
+    startGame() {
+        this.setState({ startGame: true })
     }
 
     updateInput(evt) {
@@ -91,22 +130,26 @@ class Room extends Component {
         })
     }
     render() {
-        if (this.state.users.length >= 1) {
-            return (
-                <div>
-                    <h1>{this.state.questions[this.state.currentQuestionIndex]}</h1>
-                    <form>
-                       {this.multipleChoice()}
-                    </form>
-                    <button onClick={this.nextQuestion}>Next Question</button>
-                </div>
-            )
-        }
+        // if (this.state.startGame === true) {
+        //     return (
+        //         <div>
+        //             <h1>{this.state.questions[this.state.currentQuestionIndex]}</h1>
+        //             <form>
+        //                 {this.multipleChoice()}
+        //             </form>
+        //             <button onClick={this.nextQuestion}>Next Question</button>
+        //         </div>
+        //     )
+        // }
         return (
-            <form onSubmit={this.onFormSubmit}>
-                <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue}  name='user' placeholder="Enter Username" />
-                <input type="submit" />
-            </form>
+            <div>
+                <form className={this.state.username ? '' : 'hidden'} onSubmit={this.newUser}>
+                    <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} name='user' placeholder="Enter Username" />
+                    <input type="submit" />
+                </form>
+                <div>{this.state.message}</div>
+                {this.renderUsers()}
+            </div>
         );
     }
 }

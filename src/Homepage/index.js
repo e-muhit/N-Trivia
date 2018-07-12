@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { BrowserRouter as Router, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Route, Link, Redirect } from "react-router-dom";
 import "./style.css";
 import Room from "../Room";
 import io from 'socket.io-client';
@@ -14,11 +14,12 @@ class Homepage extends Component {
             message: '',
             hideUserEntry: true,
             users: [],
-            inputValue: ''
+            inputValue: '',
+            created: false
         }
         this.createClick = this.createClick.bind(this);
         this.updateInput = this.updateInput.bind(this)
-        this.newUser = this.newUser.bind(this)
+        // this.newUser = this.newUser.bind(this)
     }
 
     createClick() {
@@ -40,7 +41,8 @@ class Homepage extends Component {
                 });
                 socket.emit('room', 'Ready');
                 this.setState({
-                    room: { roomName: roomName, socket: socket }
+                    room: { roomName: roomName, socket: socket },
+                    created: true
                 })
             })
     }
@@ -49,38 +51,44 @@ class Homepage extends Component {
         this.setState({ inputValue: evt.target.value })
     }
 
-    newUser(evt) {
-        evt.preventDefault();
-        const newUser = {
-            user: this.state.inputValue
-        }
-        fetch('/user/:room', {
-            method: "POST",
-            body: JSON.stringify(newUser),
-            headers: {
-                "Accept": "application/json",
-                "Content-type": "application/json"
-            }
-        })
-            .then(response => response.json())
-            .then(resjson => {
-            this.setState({
-                users: resjson,
-                inputValue: ''
-            });
-        });
-    }
+    // newUser(evt) {
+    //     evt.preventDefault();
+    //     const newUser = {
+    //         user: this.state.inputValue
+    //     }
+    //     fetch('/user/:room', {
+    //         method: "POST",
+    //         body: JSON.stringify(newUser),
+    //         headers: {
+    //             "Accept": "application/json",
+    //             "Content-type": "application/json"
+    //         }
+    //     })
+    //         .then(response => response.json())
+    //         .then(resjson => {
+    //         this.setState({
+    //             users: resjson,
+    //             inputValue: ''
+    //         });
+    //     });
+    // }
     render() {
+        if(this.state.created === true){
+            return <Redirect to={{
+                pathname: `/room/${this.state.room.roomName}`,
+                state: {message: this.state.message}
+            }} />
+        }
         return (
             <div className="Homepage">
                 <button onClick={this.createClick}>CREATE A ROOM</button>
                 <button>GO TO ROOM</button>
                 <div>{this.state.message}</div>
-                <form onSubmit={evt => this.newUser(evt)}>
+                {/* <form onSubmit={evt => this.newUser(evt)}>
                     {this.state.hideUserEntry ? null : <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} name='user' placeholder="Enter Username" />}
-                </form>
+                </form> */}
                 <Router>
-                    <Route path={`/${this.state.room.roomName}`} exact component={Room} />
+                    <Route path={`/room/${this.state.room.roomName}`} exact component={Room} />
                 </Router>
             </div>
         )
