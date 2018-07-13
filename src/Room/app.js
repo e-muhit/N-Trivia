@@ -1,8 +1,8 @@
 // import openSocket from 'socket.io-client';
 // const socket = openSocket('http://localhost:3000');
 
-// function timer(cb) {
+// function stimer(cb) {
 //     socket.on('timer', timestamp => cb(null, timestamp));
-//     socket.emit('timer', 1000);
+//     socket.emit('dtimer', 1000);
 // }
 // export { timer }

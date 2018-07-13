@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
+import "./style.css";
 // import { timer } from './app';
 
 class Room extends Component {
     constructor(props) {
         super(props)
-        // timer((err, timestamp) => this.setState({
         //     timestamp
         // }));
         this.state = {
@@ -59,9 +59,13 @@ class Room extends Component {
             })
     }
 
-    startGame(){
-        
+    startGame() {
+        const room = this.props.match.params.room
+        fetch(`/start/${room}`)
+            .then(response => response.json())
+            .then(resjson => console.log(resjson))
     }
+
     renderUsers() {
         if (this.state.users !== undefined) {
             return (
@@ -71,7 +75,7 @@ class Room extends Component {
                             return <li key={i}>{x}</li>
                         })}
                     </ul>
-                    {this.state.users.length <= 1 && this.state.username ? null : <button onClick={this.startGame}>Start Game</button>}
+                    {(this.state.users.length < 2 && this.state.username === null) ? null : <button onClick={this.startGame}>Start Game</button>}
                 </div>
             )
         }
@@ -105,10 +109,6 @@ class Room extends Component {
             });
     }
 
-    startGame() {
-        this.setState({ startGame: true })
-    }
-
     updateInput(evt) {
         this.setState({ inputValue: evt.target.value })
     }
@@ -123,12 +123,14 @@ class Room extends Component {
             })
         }
     }
+
     multipleChoice() {
         let current = this.state.answers[this.state.currentQuestionIndex]
         return current.map(element => {
             return <button>{element}</button>
         })
     }
+
     render() {
         // if (this.state.startGame === true) {
         //     return (
@@ -143,7 +145,7 @@ class Room extends Component {
         // }
         return (
             <div>
-                <form className={this.state.username ? '' : 'hidden'} onSubmit={this.newUser}>
+                <form className={this.state.username ? 'hidden' : ''} onSubmit={this.newUser}>
                     <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} name='user' placeholder="Enter Username" />
                     <input type="submit" />
                 </form>

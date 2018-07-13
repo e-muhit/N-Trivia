@@ -2,6 +2,7 @@ const express = require('express')
 const socketio = require('socket.io');
 const fetch = require('node-fetch');
 const bodyParser = require('body-parser');
+const querystring = require('querystring')
 
 const app = express();
 app.use(bodyParser.json())
@@ -19,7 +20,7 @@ io.attach(server, {
     pingTimeout: 5000,
     cookie: false
 })
-
+// https://opentdb.com/api.php?amount=5&difficulty=hard&type=multiple&encode=url3986
 // (`https://opentdb.com/api.php?amount=5&category=${category}&difficulty=hard&type=multiple`)
 app.get('/start/:room', (request, response) => {
     const room = request.params.room
@@ -28,14 +29,29 @@ app.get('/start/:room', (request, response) => {
     }
     const categories = [...Array(24).keys()].map(x => x + 9);
     const category = categories[Math.floor(Math.random() * categories.length)]
-    return fetch(`https://opentdb.com/api.php?amount=5&difficulty=hard&type=multiple`)
+    fetch(`https://opentdb.com/api.php?amount=5&difficulty=hard&type=multiple&encode=url3986`)
         .then(response => response.json())
         .then(json => {
-            rooms[room].questions = json;
+            rooms[room].questions = json.results.map((x) => {
+                correct_answer: querystring.unescape(x.correct_answer);
+                choices: x.incorrect_answers.map(answer => {
+                    return querystring.unescape(answer);
+                });
+                correct_position = Math.floor(Math.random() * (choices.length + 1));
+                choices.splice(correct_position, 0, correct_answer);
+                return {
+                    question: querystring.unescape(x.question),
+                    correct: correct_position,
+                    choices: choices
+                };
+            })
             rooms[room].started = true;
+            console.log(rooms);
+            console.log(rooms[room].questions);
             rooms[room].room.emit('users', `Game started.`)
             response.send({ users: rooms[room].users, err: null });
         })
+    // Interval, code to 
 })
 
 app.get('/user/:room', (request, response) => {
@@ -50,7 +66,6 @@ app.get('/user/:room', (request, response) => {
     }
 })
 
-
 // io.on('connection', client => {
 //     client.on('timer', (interval) => {
 //         console.log('client is subscribing to timer with interval ', interval);
@@ -60,18 +75,25 @@ app.get('/user/:room', (request, response) => {
 //     });
 // })
 
+// client.send(client.id);
+
 app.post('/create', (req, resp) => {
     const randomStringGenerator = () => {
         return Math.random().toString(36).toUpperCase().slice(2)
     }
     const room = randomStringGenerator();
-    console.log(rooms);
     rooms[room] = {}
     rooms[room].room = io.of(`/${room}`)
     rooms[room].started = false;
+    rooms[room].current = 0;
     rooms[room].room.on('connection', (socket) => {
         socket.on('room', (ready) => {
             socket.emit('room', 'Room Ready')
+        })
+        socket.on('question', (answer) => {
+            if ((rooms[room].started) && rooms[room].questions[rooms[room].current].question === answer.question && rooms[room].questions[rooms[room].current].correct === answer.answer) {
+                // Add a point to user
+            }
         })
     })
 
@@ -82,19 +104,17 @@ app.post('/create', (req, resp) => {
 app.post('/user/:room', (req, resp) => {
     const room = req.params.room;
     if (!rooms.hasOwnProperty(room)) {
-        resp.send({ users: null, err: 'Room does not exist' })
+        return resp.send({ users: null, err: 'Room does not exist' })
     }
     if (rooms[room].started) {
-        response.send({ users: null, err: 'Game has started' })
+        return response.send({ users: null, err: 'Game has started' })
     }
     const newUser = req.body.user;
     rooms[room].users = rooms[room].users || [];
-    console.log(newUser);
     if (rooms[room].users.includes(newUser)) {
-        resp.send({ users: null, err: 'User name already registerd to room' })
+        return resp.send({ users: null, err: 'User name already registerd to room' })
     }
     rooms[room].users.push(newUser);
-    console.log(rooms[room].users);
-    rooms[room].room.emit('users', {msg: `${newUser} has joined.`, users: rooms[room].users})
+    rooms[room].room.emit('users', { msg: `${newUser} has joined.`, users: rooms[room].users })
     resp.send({ users: rooms[room].users, err: null })
 })
