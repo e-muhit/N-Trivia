@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { BrowserRouter as Router, Route, Link, Redirect } from "react-router-dom";
 import io from 'socket.io-client';
 import "./style.css";
 // import { timer } from './app';
@@ -10,23 +11,28 @@ class Room extends Component {
         // }));
         this.state = {
             message: '',
-            questions: '',
-            correct_answers: '',
-            wrong_answers: '',
+            question: '',
             users: [],
-            currentQuestionIndex: 0,
             inputValue: '',
             answers: [],
             isHidden: true,
-            // startGame: false,
-            username: null,
+            start: false,
+            username: '',
+            time: '',
+            submitted: false,
+            points: 0,
+            starts: 0,
+            showScore: false
         }
-        this.nextQuestion = this.nextQuestion.bind(this)
+        // this.nextQuestion = this.nextQuestion.bind(this)
         this.updateInput = this.updateInput.bind(this)
         this.newUser = this.newUser.bind(this)
         this.multipleChoice = this.multipleChoice.bind(this)
         this.startGame = this.startGame.bind(this)
         this.renderUsers = this.renderUsers.bind(this)
+        this.renderUsersAndPoints = this.renderUsersAndPoints.bind(this)
+        this.sortPoints = this.sortPoints.bind(this)
+        this.killRoom = this.killRoom.bind(this)
     }
 
     componentDidMount() {
@@ -43,6 +49,32 @@ class Room extends Component {
                 })
             }
         });
+        socket.on('question', (obj) => {
+            this.setState({
+                question: obj.question,
+                answers: obj.choices,
+                start: true,
+                submitted: false,
+                showScore: false
+            })
+        })
+        socket.on('timer', (obj) => {
+            this.setState({
+                time: obj.time
+            })
+        })
+        socket.on('start', (obj) => {
+            this.setState({
+                starts: obj.starts
+            })
+        })
+        socket.on('score', (obj) => {
+            this.setState({
+                users: obj.users,
+                showScore: true,
+                start: false
+            })
+        })
         fetch(`/user/${room}`)
             .then(response => response.json())
             .then(resjson => {
@@ -58,28 +90,107 @@ class Room extends Component {
                 }
             })
     }
+    killRoom(){
+        const room = this.props.match.params.room
+        console.log('hello');
+        fetch(`/delete/${room}`,{
+            method: "DELETE",
+            headers: {
+                "Accept": "application/json",
+                "Content-type": "application/json"
+            }
+        })
+        .then(() => {
+            return <Redirect to='/' />
+        })
+    }
+
+    sortPoints(a, b) {
+        if (a.points < b.points) {
+            return 1
+        } else if (a.points > b.points) {
+            return -1
+        } else {
+            return 0
+        }
+    }
 
     startGame() {
         const room = this.props.match.params.room
-        fetch(`/start/${room}`)
-            .then(response => response.json())
-            .then(resjson => console.log(resjson))
+        const socket = io(`/${room}`);
+        let level;
+        if (this.state.starts < 1) {
+            level = 'easy'
+        } else if (this.state.starts == 1) {
+            level = 'medium'
+        } else {
+            level = 'hard'
+        }
+        fetch(`/start/${room}/${level}`)
+            .then(resp => resp.json())
+            .then(rejson => console.log(rejson))
     }
 
+
     renderUsers() {
+        const renderButton = () => {
+            if (this.state.users.length > 1 && this.state.username !== null) {
+                return <button onClick={this.startGame}>Start Game</button>
+            }
+        }
         if (this.state.users !== undefined) {
             return (
                 <div>
                     <ul>
                         {this.state.users.map((x, i) => {
-                            return <li key={i}>{x}</li>
+                            return <li key={i}>{x.name}</li>
                         })}
                     </ul>
-                    {(this.state.users.length < 2 && this.state.username === null) ? null : <button onClick={this.startGame}>Start Game</button>}
+                    {renderButton()}
                 </div>
             )
         }
     }
+
+    renderUsersAndPoints() {
+        if (this.state.users !== undefined) {
+            let temp = this.state.users.slice(0)
+            temp.sort((a, b) => {
+                if (a.points < b.points) {
+                    return 1
+                } else if (a.points > b.points) {
+                    return -1
+                } else {
+                    return 0
+                }
+            })
+            return (
+                <div>
+                    {temp.map((x, i) => {
+                        return (
+                            <div>
+                                <h3 key={i}>{x.name}: {x.points}</h3>
+                                {x.answer.map((y, index) => {
+                                    return <p key={index}>Question{index + 1}: {y}</p>
+                                })}
+                            </div>
+                        )
+                    })}
+                </div>
+            )
+        }
+    }
+
+    submitAnswer = (e, value) => {
+        const room = this.props.match.params.room
+        const socket = io(`/${room}`);
+        e.preventDefault();
+        socket.emit('answer', { question: this.state.question, answer: value, user: this.state.username })
+        this.setState({
+            submitted: true
+        })
+    }
+
     newUser(evt) {
         evt.preventDefault();
         const newUser = {
@@ -113,36 +224,35 @@ class Room extends Component {
         this.setState({ inputValue: evt.target.value })
     }
 
-    nextQuestion() {
-        this.setState({
-            currentQuestionIndex: this.state.currentQuestionIndex + 1
-        })
-        if (this.state.currentQuestionIndex >= this.state.questions.length - 1) {
-            this.setState({
-                currentQuestionIndex: 0
-            })
-        }
-    }
-
     multipleChoice() {
-        let current = this.state.answers[this.state.currentQuestionIndex]
-        return current.map(element => {
-            return <button>{element}</button>
+        return this.state.answers.map((element, index) => {
+            return <button className={this.state.submitted ? 'hidden' : ''} onClick={e => { this.submitAnswer(e, index) }} value={index} key={index}>{element}</button>
         })
     }
 
     render() {
-        // if (this.state.startGame === true) {
-        //     return (
-        //         <div>
-        //             <h1>{this.state.questions[this.state.currentQuestionIndex]}</h1>
-        //             <form>
-        //                 {this.multipleChoice()}
-        //             </form>
-        //             <button onClick={this.nextQuestion}>Next Question</button>
-        //         </div>
-        //     )
-        // }
+        if (this.state.start === true) {
+            return (
+                <div>
+                    <h1>{this.state.question}</h1>
+                    <form>
+                        {this.multipleChoice()}
+                    </form>
+                    <div>{this.state.time}</div>
+                    <footer>{this.state.username}</footer>
+                </div>
+            )
+        }
+        if (this.state.showScore === true) {
+            return (
+                <div>
+                    {this.renderUsersAndPoints()}
+                    <button onClick={this.startGame}>Play Again</button>
+                    <button onClick={this.killRoom}>End Game</button>
+                    <footer>{this.state.username}</footer>
+                </div>
+            )
+        }
         return (
             <div>
                 <form className={this.state.username ? 'hidden' : ''} onSubmit={this.newUser}>
@@ -151,6 +261,7 @@ class Room extends Component {
                 </form>
                 <div>{this.state.message}</div>
                 {this.renderUsers()}
+                <footer>{this.state.username}</footer>
             </div>
         );
     }

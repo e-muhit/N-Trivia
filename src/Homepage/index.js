@@ -51,27 +51,6 @@ class Homepage extends Component {
         this.setState({ inputValue: evt.target.value })
     }
 
-    // newUser(evt) {
-    //     evt.preventDefault();
-    //     const newUser = {
-    //         user: this.state.inputValue
-    //     }
-    //     fetch('/user/:room', {
-    //         method: "POST",
-    //         body: JSON.stringify(newUser),
-    //         headers: {
-    //             "Accept": "application/json",
-    //             "Content-type": "application/json"
-    //         }
-    //     })
-    //         .then(response => response.json())
-    //         .then(resjson => {
-    //         this.setState({
-    //             users: resjson,
-    //             inputValue: ''
-    //         });
-    //     });
-    // }
     render() {
         if(this.state.created === true){
             return <Redirect to={{

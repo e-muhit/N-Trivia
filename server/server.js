@@ -14,27 +14,34 @@ const io = socketio(server);
 
 // Objects of all the rooms
 let rooms = {}
+let difficulty = ''
 
 io.attach(server, {
     pingInterval: 10000,
     pingTimeout: 5000,
     cookie: false
 })
-// https://opentdb.com/api.php?amount=5&difficulty=hard&type=multiple&encode=url3986
-// (`https://opentdb.com/api.php?amount=5&category=${category}&difficulty=hard&type=multiple`)
-app.get('/start/:room', (request, response) => {
+
+app.get('/start/:room/:level', (request, response) => {
     const room = request.params.room
+    const level = request.params.level
     if (!rooms.hasOwnProperty(room)) {
         response.send({ users: null, err: 'Room does not exist' })
     }
-    const categories = [...Array(24).keys()].map(x => x + 9);
-    const category = categories[Math.floor(Math.random() * categories.length)]
-    fetch(`https://opentdb.com/api.php?amount=5&difficulty=hard&type=multiple&encode=url3986`)
+    rooms[room].current = 0
+    rooms[room].users.map(x => {
+        x.points = 0,
+            x.answer = []
+    })
+    rooms[room].starts++
+    rooms[room].room.emit('start', { starts: rooms[room].starts })
+    console.log(level)
+    fetch(`https://opentdb.com/api.php?amount=1&difficulty=${level}&type=multiple&encode=url3986`)
         .then(response => response.json())
         .then(json => {
             rooms[room].questions = json.results.map((x) => {
-                correct_answer: querystring.unescape(x.correct_answer);
-                choices: x.incorrect_answers.map(answer => {
+                correct_answer = querystring.unescape(x.correct_answer);
+                choices = x.incorrect_answers.map(answer => {
                     return querystring.unescape(answer);
                 });
                 correct_position = Math.floor(Math.random() * (choices.length + 1));
@@ -46,12 +53,33 @@ app.get('/start/:room', (request, response) => {
                 };
             })
             rooms[room].started = true;
-            console.log(rooms);
+            console.log(rooms[room].users);
             console.log(rooms[room].questions);
             rooms[room].room.emit('users', `Game started.`)
             response.send({ users: rooms[room].users, err: null });
+
+            let questionDuration = 60;
+            let timer = questionDuration;
+            let roomTimer = setInterval(() => {
+                if (timer === questionDuration) {
+                    rooms[room].room.emit('question',
+                        {
+                            question: rooms[room].questions[rooms[room].current].question,
+                            choices: rooms[room].questions[rooms[room].current].choices
+                        })
+                }
+                rooms[room].room.emit('timer', { time: timer });
+                if (--timer < 0 || rooms[room].answersAmount >= rooms[room].users.length) {
+                    rooms[room].answersAmount = 0
+                    timer = questionDuration;
+                    rooms[room].current++;
+                    if (rooms[room].current > rooms[room].questions.length - 1) {
+                        clearInterval(roomTimer);
+                        rooms[room].room.emit('score', { users: rooms[room].users })
+                    }
+                }
+            }, 1000)
         })
-    // Interval, code to 
 })
 
 app.get('/user/:room', (request, response) => {
@@ -69,7 +97,7 @@ app.get('/user/:room', (request, response) => {
 // io.on('connection', client => {
 //     client.on('timer', (interval) => {
 //         console.log('client is subscribing to timer with interval ', interval);
-//         setInterval(() => {
+
 //             client.emit('timer', new Date());
 //         }, interval);
 //     });
@@ -86,19 +114,38 @@ app.post('/create', (req, resp) => {
     rooms[room].room = io.of(`/${room}`)
     rooms[room].started = false;
     rooms[room].current = 0;
+    rooms[room].answersAmount = 0;
+    rooms[room].starts = 0;
     rooms[room].room.on('connection', (socket) => {
         socket.on('room', (ready) => {
             socket.emit('room', 'Room Ready')
         })
-        socket.on('question', (answer) => {
+        socket.on('start', (msg) => {
+            difficulty = msg
+        })
+        socket.on('answer', (answer) => {
+            rooms[room].answersAmount++
             if ((rooms[room].started) && rooms[room].questions[rooms[room].current].question === answer.question && rooms[room].questions[rooms[room].current].correct === answer.answer) {
-                // Add a point to user
+                for (let x = 0; x < rooms[room].users.length; x++) {
+                    if (rooms[room].users[x].name == answer.user) {
+                        rooms[room].users[x].points += 1000
+                        rooms[room].users[x].answer.push(`${rooms[room].questions[rooms[room].current].question}, Your Answer: ${rooms[room].questions[rooms[room].current].choices[answer.answer]}  ✅`)
+                        console.log(rooms[room].users[x]);
+
+                    }
+                }
+            } else {
+                for (let y = 0; y < rooms[room].users.length; y++) {
+                    if (rooms[room].users[y].name == answer.user) {
+                        rooms[room].users[y].answer.push(`${rooms[room].questions[rooms[room].current].question}, Your Answer: ${rooms[room].questions[rooms[room].current].choices[answer.answer]} ❌, Correct Answer: ${rooms[room].questions[rooms[room].current].choices[rooms[room].questions[rooms[room].current].correct]}`)
+                        console.log(rooms[room].users[y]);
+                    }
+                }
             }
         })
     })
 
     resp.send({ roomName: room })
-
 })
 
 app.post('/user/:room', (req, resp) => {
@@ -114,7 +161,29 @@ app.post('/user/:room', (req, resp) => {
     if (rooms[room].users.includes(newUser)) {
         return resp.send({ users: null, err: 'User name already registerd to room' })
     }
-    rooms[room].users.push(newUser);
+    rooms[room].users.push({
+        name: newUser,
+        points: 0,
+        answer: [],
+        lie: ''
+    });
     rooms[room].room.emit('users', { msg: `${newUser} has joined.`, users: rooms[room].users })
     resp.send({ users: rooms[room].users, err: null })
+})
+
+app.delete('/delete/:room', (req, resp) => {
+    const room = req.params.room
+    for (x = 0, x < rooms.length; x++;) {
+        if (rooms[x] == room) {
+            console.log('hello');
+            rooms[room].room.leave('users')
+            rooms[room].room.leave('question')
+            rooms[room].room.leave('timer')
+            rooms[room].room.leave('start')
+            rooms[room].room.leave('score')
+            let index = rooms.indexOf(room)
+            rooms.splice(index, 1)
+        }
+    }
+    resp.send({status: 'ok'})
 })
