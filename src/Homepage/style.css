@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css?family=Bungee+Shade');
+
+.button-div{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.Homepage h1{
+    text-align: center;
+    font-size: 10rem;
+    font-family: 'Bungee Shade', cursive;
+}

@@ -12,9 +12,7 @@ const server = app.listen(PORT, () => {
 });
 const io = socketio(server);
 
-// Objects of all the rooms
 let rooms = {}
-let difficulty = ''
 
 io.attach(server, {
     pingInterval: 10000,
@@ -53,8 +51,6 @@ app.get('/start/:room/:level', (request, response) => {
                 };
             })
             rooms[room].started = true;
-            console.log(rooms[room].users);
-            console.log(rooms[room].questions);
             rooms[room].room.emit('users', `Game started.`)
             response.send({ users: rooms[room].users, err: null });
 
@@ -94,17 +90,6 @@ app.get('/user/:room', (request, response) => {
     }
 })
 
-// io.on('connection', client => {
-//     client.on('timer', (interval) => {
-//         console.log('client is subscribing to timer with interval ', interval);
-
-//             client.emit('timer', new Date());
-//         }, interval);
-//     });
-// })
-
-// client.send(client.id);
-
 app.post('/create', (req, resp) => {
     const randomStringGenerator = () => {
         return Math.random().toString(36).toUpperCase().slice(2)
@@ -131,7 +116,6 @@ app.post('/create', (req, resp) => {
                         rooms[room].users[x].points += 1000
                         rooms[room].users[x].answer.push(`${rooms[room].questions[rooms[room].current].question}, Your Answer: ${rooms[room].questions[rooms[room].current].choices[answer.answer]}  ✅`)
                         console.log(rooms[room].users[x]);
-
                     }
                 }
             } else {
@@ -173,17 +157,8 @@ app.post('/user/:room', (req, resp) => {
 
 app.delete('/delete/:room', (req, resp) => {
     const room = req.params.room
-    for (x = 0, x < rooms.length; x++;) {
-        if (rooms[x] == room) {
-            console.log('hello');
-            rooms[room].room.leave('users')
-            rooms[room].room.leave('question')
-            rooms[room].room.leave('timer')
-            rooms[room].room.leave('start')
-            rooms[room].room.leave('score')
-            let index = rooms.indexOf(room)
-            rooms.splice(index, 1)
-        }
+    if (rooms.hasOwnProperty(room)) {
+        rooms[room].room.emit('delete', 'delete')
+        delete rooms[room]
     }
-    resp.send({status: 'ok'})
 })

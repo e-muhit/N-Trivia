@@ -12,14 +12,24 @@ class Homepage extends Component {
         this.state = {
             room: {},
             message: '',
-            hideUserEntry: true,
+            hideRoomEntry: true,
             users: [],
             inputValue: '',
-            created: false
+            created: false,
+            error: null,
+            errorInfo: null
         }
         this.createClick = this.createClick.bind(this);
         this.updateInput = this.updateInput.bind(this)
-        // this.newUser = this.newUser.bind(this)
+        this.unhide = this.unhide.bind(this)
+        this.redirectToRoom = this.redirectToRoom.bind(this)
+    }
+
+    componentDidCatch(error, errorInfo) {
+        this.setState({
+            error: error,
+            errorInfo: errorInfo
+        })
     }
 
     createClick() {
@@ -36,7 +46,6 @@ class Homepage extends Component {
                 socket.on('room', (msg) => {
                     this.setState({
                         message: msg,
-                        hideUserEntry: false
                     })
                 });
                 socket.emit('room', 'Ready');
@@ -51,21 +60,46 @@ class Homepage extends Component {
         this.setState({ inputValue: evt.target.value })
     }
 
+    unhide() {
+        this.setState({ hideRoomEntry: false })
+    }
+
+    redirectToRoom() {
+        return <Redirect to={{
+            pathname: `/room/${this.state.inputValue}`,
+            state: { message: this.state.message }
+        }} />
+    }
+
     render() {
-        if(this.state.created === true){
+        if (this.state.errorInfo) {
+            return (
+                <div>
+                    <h2>Something went wrong.</h2>
+                    <details style={{ whiteSpace: 'pre-wrap' }}>
+                        {this.state.error && this.state.error.toString()}
+                        <br />
+                        {this.state.errorInfo.componentStack}
+                    </details>
+                </div>
+            );
+        }
+        if (this.state.created === true) {
             return <Redirect to={{
                 pathname: `/room/${this.state.room.roomName}`,
-                state: {message: this.state.message}
+                state: { message: this.state.message }
             }} />
         }
         return (
             <div className="Homepage">
-                <button onClick={this.createClick}>CREATE A ROOM</button>
-                <button>GO TO ROOM</button>
-                <div>{this.state.message}</div>
-                {/* <form onSubmit={evt => this.newUser(evt)}>
-                    {this.state.hideUserEntry ? null : <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} name='user' placeholder="Enter Username" />}
-                </form> */}
+                <h1>N-Trivia</h1>
+                <div className="button-div">
+                    <button onClick={this.createClick}>CREATE A ROOM</button>
+                    <button onClick={this.unhide}>GO TO ROOM</button>
+                    <form className="room-input" action={`/room/${this.state.inputValue}`} onSubmit={this.redirectToRoom}>
+                        {this.state.hideRoomEntry ? null : <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} placeholder="Enter Room Code" />}
+                    </form>
+                </div>
                 <Router>
                     <Route path={`/room/${this.state.room.roomName}`} exact component={Room} />
                 </Router>

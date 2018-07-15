@@ -1,3 +1,94 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto');
 .hidden {
     display: none
+}
+.hidding{
+    visibility: hidden;
+}
+.starting{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.starting .message{
+    font-family: 'Roboto', sans-serif;
+    font-size: 1.5rem;
+    padding: .5rem;
+}
+
+.questions-container{
+    height: 100vh;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    grid-template-areas:
+    "q q q q"
+    "q q q q"
+    "b b b b"
+    "b b b b"
+    "b b b b"
+    "b b b b"
+    "t t t t"
+    "f f f f";
+}
+
+.questions-container .question{
+    grid-area: q;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.questions-container .question h1{
+    padding: 3rem;
+    background-color: aliceblue;
+    border: 10px solid black;
+    border-radius: 25px; 
+    font-family: 'Roboto', sans-serif;
+}
+
+.questions-container .buttons{
+    grid-area: b;
+    display: flex;
+    margin: 0 auto;
+    width: 35rem;
+    height: 10rem;;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-content: space-between;
+    align-items: center;
+}
+
+.questions-container .buttons .grid-button{
+    border-radius: 50% / 10%; 
+    width: 15rem;
+    height: 5rem;
+    font-size: .75rem;
+    font-family: 'Roboto', sans-serif;
+    font-weight: bold;
+}
+
+.questions-container .time {
+    grid-area: t;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.questions-container .time .timer{
+    border-radius: 50px;
+    font-size: 2rem;
+    background-color: red;
+    color: white;
+    padding: 1rem;
+}
+
+.questions-container footer {
+    grid-area: f;
 }

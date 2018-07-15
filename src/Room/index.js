@@ -2,29 +2,26 @@ import React, { Component } from 'react';
 import { BrowserRouter as Router, Route, Link, Redirect } from "react-router-dom";
 import io from 'socket.io-client';
 import "./style.css";
-// import { timer } from './app';
 
 class Room extends Component {
     constructor(props) {
         super(props)
-        //     timestamp
-        // }));
         this.state = {
             message: '',
             question: '',
             users: [],
             inputValue: '',
             answers: [],
-            isHidden: true,
             start: false,
             username: '',
             time: '',
             submitted: false,
-            points: 0,
             starts: 0,
-            showScore: false
+            showScore: false,
+            deleted: false,
+            error: null,
+            errorInfo: null
         }
-        // this.nextQuestion = this.nextQuestion.bind(this)
         this.updateInput = this.updateInput.bind(this)
         this.newUser = this.newUser.bind(this)
         this.multipleChoice = this.multipleChoice.bind(this)
@@ -42,7 +39,7 @@ class Room extends Component {
             users: []
         })
         socket.on('users', (msg) => {
-            if (msg != 'Game started') {
+            if (msg !== 'Game started') {
                 this.setState({
                     message: msg.msg,
                     users: msg.users
@@ -75,34 +72,41 @@ class Room extends Component {
                 start: false
             })
         })
+        socket.on('delete', (msg) => {
+            this.setState({
+                deleted: true,
+                showScore: false
+            })
+        })
         fetch(`/user/${room}`)
             .then(response => response.json())
             .then(resjson => {
                 this.setState({
                     users: resjson.users
                 })
-                if (this.state.users !== undefined) {
-                    if (this.state.users.length >= 3) {
-                        this.setState({
-                            isHidden: false
-                        })
-                    }
-                }
             })
     }
-    killRoom(){
+
+    componentDidCatch(error, errorInfo) {
+        this.setState({
+            error: error,
+            errorInfo: errorInfo
+        })
+    }
+
+    killRoom() {
         const room = this.props.match.params.room
         console.log('hello');
-        fetch(`/delete/${room}`,{
+        fetch(`/delete/${room}`, {
             method: "DELETE",
             headers: {
                 "Accept": "application/json",
                 "Content-type": "application/json"
             }
         })
-        .then(() => {
-            return <Redirect to='/' />
-        })
+            .then(() => {
+                return <Redirect to='/' />
+            })
     }
 
     sortPoints(a, b) {
@@ -121,7 +125,7 @@ class Room extends Component {
         let level;
         if (this.state.starts < 1) {
             level = 'easy'
-        } else if (this.state.starts == 1) {
+        } else if (this.state.starts === 1) {
             level = 'medium'
         } else {
             level = 'hard'
@@ -212,11 +216,6 @@ class Room extends Component {
                     username: newUser.user,
                     inputValue: ''
                 })
-                if (this.state.users.length >= 3) {
-                    this.setState({
-                        isHidden: false
-                    })
-                }
             });
     }
 
@@ -226,42 +225,57 @@ class Room extends Component {
 
     multipleChoice() {
         return this.state.answers.map((element, index) => {
-            return <button className={this.state.submitted ? 'hidden' : ''} onClick={e => { this.submitAnswer(e, index) }} value={index} key={index}>{element}</button>
+            return <button className={this.state.submitted ? 'hidding' : 'grid-button'} onClick={e => { this.submitAnswer(e, index) }} value={index} key={index}>{element}</button>
         })
     }
 
     render() {
-        if (this.state.start === true) {
+        if (this.state.errorInfo) {
             return (
                 <div>
-                    <h1>{this.state.question}</h1>
-                    <form>
+                    <h2>Something went wrong.</h2>
+                    <details style={{ whiteSpace: 'pre-wrap' }}>
+                        {this.state.error && this.state.error.toString()}
+                        <br />
+                        {this.state.errorInfo.componentStack}
+                    </details>
+                </div>
+            );
+        }
+        if (this.state.start === true) {
+            return (
+                <div className="questions-container">
+                    <div className="question"><h1>{this.state.question}</h1></div>
+                    <form className="buttons">
                         {this.multipleChoice()}
                     </form>
-                    <div>{this.state.time}</div>
-                    <footer>{this.state.username}</footer>
+                    <div className="time"><div className="timer">{this.state.time}</div></div>
+                    <footer><div>Name: {this.state.username}</div> <div>Room: {this.props.match.params.room}</div></footer>
                 </div>
             )
         }
         if (this.state.showScore === true) {
             return (
-                <div>
+                <div className="">
                     {this.renderUsersAndPoints()}
                     <button onClick={this.startGame}>Play Again</button>
                     <button onClick={this.killRoom}>End Game</button>
-                    <footer>{this.state.username}</footer>
+                    <footer><div>Name: {this.state.username}</div> <div>Room: {this.props.match.params.room}</div></footer>
                 </div>
             )
         }
+        if (this.state.deleted === true) {
+            return <Redirect to='/' />
+        }
         return (
-            <div>
+            <div className="starting">
                 <form className={this.state.username ? 'hidden' : ''} onSubmit={this.newUser}>
                     <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} name='user' placeholder="Enter Username" />
-                    <input type="submit" />
+                    <button type="submit">Submit</button>
                 </form>
-                <div>{this.state.message}</div>
+                <div className="message">{this.state.message}</div>
                 {this.renderUsers()}
-                <footer>{this.state.username}</footer>
+                <footer><div>Name: {this.state.username}</div> <div>Room: {this.props.match.params.room}</div></footer>
             </div>
         );
     }
