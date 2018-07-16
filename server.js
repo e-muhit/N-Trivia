@@ -34,7 +34,7 @@ app.get('/start/:room/:level', (request, response) => {
     rooms[room].starts++
     rooms[room].room.emit('start', { starts: rooms[room].starts })
     console.log(level)
-    fetch(`https://opentdb.com/api.php?amount=1&difficulty=${level}&type=multiple&encode=url3986`)
+    fetch(`https://opentdb.com/api.php?amount=15&difficulty=${level}&type=multiple&encode=url3986`)
         .then(response => response.json())
         .then(json => {
             rooms[room].questions = json.results.map((x) => {
@@ -105,9 +105,6 @@ app.post('/create', (req, resp) => {
         socket.on('room', (ready) => {
             socket.emit('room', 'Room Ready')
         })
-        socket.on('start', (msg) => {
-            difficulty = msg
-        })
         socket.on('answer', (answer) => {
             rooms[room].answersAmount++
             if ((rooms[room].started) && rooms[room].questions[rooms[room].current].question === answer.question && rooms[room].questions[rooms[room].current].correct === answer.answer) {
@@ -148,9 +145,10 @@ app.post('/user/:room', (req, resp) => {
     rooms[room].users.push({
         name: newUser,
         points: 0,
-        answer: [],
-        lie: ''
+        answer: []
     });
+    console.log(rooms[room].users);
+    
     rooms[room].room.emit('users', { msg: `${newUser} has joined.`, users: rooms[room].users })
     resp.send({ users: rooms[room].users, err: null })
 })

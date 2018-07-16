@@ -10,7 +10,8 @@ class App extends Component {
   
     this.state = {
        error: null,
-       errorInfo: null
+       errorInfo: null,
+       music: []
     }
   }
   

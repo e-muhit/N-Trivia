@@ -20,7 +20,9 @@ class Room extends Component {
             showScore: false,
             deleted: false,
             error: null,
-            errorInfo: null
+            errorInfo: null,
+            socket: null,
+            questionNumber: 0
         }
         this.updateInput = this.updateInput.bind(this)
         this.newUser = this.newUser.bind(this)
@@ -42,7 +44,8 @@ class Room extends Component {
             if (msg !== 'Game started') {
                 this.setState({
                     message: msg.msg,
-                    users: msg.users
+                    users: msg.users,
+                    socket: io(`/${room}`)
                 })
             }
         });
@@ -52,7 +55,8 @@ class Room extends Component {
                 answers: obj.choices,
                 start: true,
                 submitted: false,
-                showScore: false
+                showScore: false,
+                questionNumber: this.state.questionNumber + 1
             })
         })
         socket.on('timer', (obj) => {
@@ -121,7 +125,6 @@ class Room extends Component {
 
     startGame() {
         const room = this.props.match.params.room
-        const socket = io(`/${room}`);
         let level;
         if (this.state.starts < 1) {
             level = 'easy'
@@ -173,9 +176,14 @@ class Room extends Component {
                     {temp.map((x, i) => {
                         return (
                             <div>
-                                <h3 key={i}>{x.name}: {x.points}</h3>
+                                <h3 className="points" key={i}>{x.name}: {x.points}</h3>
                                 {x.answer.map((y, index) => {
-                                    return <p key={index}>Question{index + 1}: {y}</p>
+                                    if (x.name === this.state.username) {
+                                        return (
+                                            <div className="answer-container">
+                                                <p key={index}>Question{index + 1}: {y}</p>
+                                            </div>)
+                                    }
                                 })}
                             </div>
                         )
@@ -187,9 +195,8 @@ class Room extends Component {
 
     submitAnswer = (e, value) => {
         const room = this.props.match.params.room
-        const socket = io(`/${room}`);
         e.preventDefault();
-        socket.emit('answer', { question: this.state.question, answer: value, user: this.state.username })
+        this.state.socket.emit('answer', { question: this.state.question, answer: value, user: this.state.username })
         this.setState({
             submitted: true
         })
@@ -250,13 +257,13 @@ class Room extends Component {
                         {this.multipleChoice()}
                     </form>
                     <div className="time"><div className="timer">{this.state.time}</div></div>
-                    <footer><div>Name: {this.state.username}</div> <div>Room: {this.props.match.params.room}</div></footer>
+                    <footer><div>Name: {this.state.username}</div> <div>Question: {this.state.questionNumber}</div> <div>Room: {this.props.match.params.room}</div></footer>
                 </div>
             )
         }
         if (this.state.showScore === true) {
             return (
-                <div className="">
+                <div className="user-score-container">
                     {this.renderUsersAndPoints()}
                     <button onClick={this.startGame}>Play Again</button>
                     <button onClick={this.killRoom}>End Game</button>
@@ -269,6 +276,7 @@ class Room extends Component {
         }
         return (
             <div className="starting">
+                <h1>Welcome to Room {this.props.match.params.room}</h1>
                 <form className={this.state.username ? 'hidden' : ''} onSubmit={this.newUser}>
                     <input onChange={evt => this.updateInput(evt)} value={this.state.inputValue} name='user' placeholder="Enter Username" />
                     <button type="submit">Submit</button>
