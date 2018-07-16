@@ -10,9 +10,9 @@ const PORT = process.env.PORT || 4567;
 const server = app.listen(PORT, () => {
     console.log(`Express web server listening on port ${PORT}`);
 });
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static('build'));
-}
+
+app.use("/", express.static("./build/"));
+
 const io = socketio(server);
 
 let rooms = {}
@@ -163,3 +163,10 @@ app.delete('/delete/:room', (req, resp) => {
         delete rooms[room]
     }
 })
+
+
+if (process.env.NODE_ENV == "production") {
+    app.get("/*", function (request, response) {
+        response.sendFile(path.join(__dirname, "build", "index.html"));
+    });
+}
