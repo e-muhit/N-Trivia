@@ -3,7 +3,7 @@
 Link: https://n-trivia.herokuapp.com/
 
 ## Description
-N-Trivia is a multiplayer trivia game.  Multiple-choice questions are displayed on the screen and players answer the question using theur computers/laptops tablet or smartphones.
+N-Trivia is a multiplayer trivia game.  Multiple-choice questions are displayed on the screen and players answer the question using their computers/laptops tablet or smartphones.
 
 ## User Stories
 #### Users Can
@@ -16,8 +16,8 @@ N-Trivia is a multiplayer trivia game.  Multiple-choice questions are displayed 
 ## Tech Used
 * Socket.io - Connect multiple users to the same server
 * React.js - Javascript Library for building user interfaces
-* Express - Web Applicatin framework for Node.js
-* Node-fetch - Module that bringe fetch to Node.js
+* Express - Web Application framework for Node.js
+* Node-fetch - Module that brings fetch to Node.js
 * Querystring - Module for parsing and formatting URL query strings
 * Open Trivia Db API - API for all the trivia questions
 
@@ -63,14 +63,13 @@ Since Socket.io was something new to me, I took the first couple of days just re
 
 ## Things I Would Like To Implements In The Future
 * Having a database for the rooms
-* Saving the socket.id of each player so I can have them choose a category
+* Saving the socket.id of each player so I can have them choose a category or send them their current amount of ppints
 * Implementing the lie phase (like in Fibbage)
 * Have user Authentication
-* Show the player their current score
 
 ## Installation Instructions
 * Fork and Clone this repo
 * Cd into this repo
-* npm install all dependencies
+* run npm install 
 * run node/nodemon server.js
 * run npm start on another tab of terminal
