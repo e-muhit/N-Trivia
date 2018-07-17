@@ -67,7 +67,6 @@ Since Socket.io was something new to me, I took the first couple of days just re
 * Implementing the lie phase (like in Fibbage)
 * Have user Authentication
 * Show the player their current score
-* 
 
 ## Installation Instructions
 * Fork and Clone this repo
