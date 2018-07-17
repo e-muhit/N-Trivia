@@ -11,3 +11,19 @@
     font-size: 10rem;
     font-family: 'Bungee Shade', cursive;
 }
+
+@media (max-width: 1000px) and (min-width: 600px){
+    .Homepage h1{
+        text-align: center;
+        font-size: 5rem;
+        font-family: 'Bungee Shade', cursive;
+    }
+}
+
+@media (max-width: 599px){
+    .Homepage h1{
+        text-align: center;
+        font-size: 2rem;
+        font-family: 'Bungee Shade', cursive;
+    }
+}
